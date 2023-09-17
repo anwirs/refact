@@ -63,7 +63,7 @@ class NlpSamplingParams(BaseModel):
 
 
 class NlpCompletion(NlpSamplingParams):
-    model: str = Query(default="", regex="^[a-z/A-Z0-9_\.]+$")
+    model: str = Query(default=Required, regex="^[a-z/A-Z0-9_\.\-]+$")
     prompt: str
     n: int = 1
     echo: bool = False
@@ -78,7 +78,7 @@ class POI(BaseModel):
 
 
 class DiffCompletion(NlpSamplingParams):
-    model: str = Query(default="", regex="^[a-z/A-Z0-9_\.]+$")
+    model: str = Query(default="", regex="^[a-z/A-Z0-9_\.\-]+$")
     intent: str
     sources: Dict[str, str]
     cursor_file: str
@@ -232,6 +232,7 @@ class CompletionsRouter(APIRouter):
                  timeout: int = 30,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.add_api_route("/coding_assistant_caps.json", self._caps, methods=["GET"])
         self.add_api_route("/login", self._login, methods=["GET"])
         self.add_api_route("/secret-key-activate", self._secret_key_activate, methods=["GET"])
         self.add_api_route("/completions", self._completions, methods=["POST"])
@@ -240,6 +241,21 @@ class CompletionsRouter(APIRouter):
         self._inference_queue = inference_queue
         self._id2ticket = id2ticket
         self._timeout = timeout
+
+    async def _caps(self):
+        json = {
+            "cloud_name": "Refact Self-Hosted",
+            "endpoint_template": "/v1/completions",
+            "endpoint_style": "openai",
+            "code_completion_default_model": "",
+            "code_chat_default_model": "llama2/13b",
+            "tokenizer_path_template": "https://huggingface.co/$MODEL/resolve/main/tokenizer.json",
+            "tokenizer_rewrite_path": {
+                "llama2/7b": "TheBloke/Llama-2-7b-Chat-GPTQ",
+                "llama2/13b": "TheBloke/Llama-2-13B-chat-GPTQ"
+            }
+        }
+        return json
 
     async def _login(self):
         longthink_functions = dict()
@@ -299,7 +315,7 @@ class CompletionsRouter(APIRouter):
     async def _completions(self, post: NlpCompletion, account: str = "XXX"):
         ticket = Ticket("comp-")
         req = post.clamp()
-        model_name, err_msg = completion_resolve_model(self._inference_queue)
+        model_name, err_msg = static_resolve_model(post.model, self._inference_queue)
         if err_msg:
             log("%s model resolve \"%s\" -> error \"%s\" from %s" % (ticket.id(), post.model, err_msg, account))
             raise HTTPException(status_code=400, detail=err_msg)
@@ -317,7 +333,10 @@ class CompletionsRouter(APIRouter):
         self._id2ticket[ticket.id()] = ticket
         await q.put(ticket)
         seen = [""] * post.n
-        return StreamingResponse(completion_streamer(ticket, post, self._timeout, seen, req["created"]))
+        return StreamingResponse(
+            completion_streamer(ticket, post, self._timeout, seen, req["created"]),
+            media_type=("text/event-stream" if post.stream else "application/json"),
+            )
 
     async def _contrast(self, post: DiffCompletion, request: Request, account: str = "XXX"):
         if post.function != "diff-anywhere":
