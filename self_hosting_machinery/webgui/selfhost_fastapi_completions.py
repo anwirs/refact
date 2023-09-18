@@ -247,13 +247,14 @@ class CompletionsRouter(APIRouter):
             "cloud_name": "Refact Self-Hosted",
             "endpoint_template": "/v1/completions",
             "endpoint_style": "openai",
-            "code_completion_default_model": "",
+            "code_completion_default_model": "smallcloudai/Refact-1_6B-fim",
             "code_chat_default_model": "llama2/13b",
             "tokenizer_path_template": "https://huggingface.co/$MODEL/resolve/main/tokenizer.json",
             "tokenizer_rewrite_path": {
                 "llama2/7b": "TheBloke/Llama-2-7b-Chat-GPTQ",
                 "llama2/13b": "TheBloke/Llama-2-13B-chat-GPTQ"
-            }
+            },
+            "running_models": ["smallcloudai/Refact-1_6B-fim"],
         }
         return json
 
