@@ -254,7 +254,7 @@ class CompletionsRouter(APIRouter):
                 "llama2/7b": "TheBloke/Llama-2-7b-Chat-GPTQ",
                 "llama2/13b": "TheBloke/Llama-2-13B-chat-GPTQ"
             },
-            "running_models": ["smallcloudai/Refact-1_6B-fim"],
+            "running_models": ["smallcloudai/Refact-1_6B-fim", "llama2/13b"],
         }
         return json
 
