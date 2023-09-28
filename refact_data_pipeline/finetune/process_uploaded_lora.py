@@ -4,12 +4,11 @@ import logging
 
 from pathlib import Path
 
-from refact_data_pipeline.finetune.process_uploaded_files import rm_and_unpack, get_source_type
 from self_hosting_machinery import env
 
 
-def rm(fn: str):
-    cmd = ['rm', '-rf', fn]
+def rm(fn):
+    cmd = ['rm', '-rf', str(fn)]
     subprocess.check_call(cmd)
 
 
@@ -19,13 +18,14 @@ def main():
             try:
                 if not file.is_file():
                     continue
-                source_type = get_source_type(str(file))
-                if source_type != 'archive':
+                if file.suffix != '.zip':
                     continue
 
                 upload_filename = str(file)
-                unpack_filename = str(file.parent / file.stem)
-                rm_and_unpack(upload_filename, unpack_filename, 'archive', upload_filename)
+                unpack_filename = str(file.parent)
+                rm(file.parent / file.stem)
+                cmd = ["unzip", '-q', "-d", unpack_filename, upload_filename]
+                subprocess.check_call(cmd)
                 rm(upload_filename)
             except BaseException as e:
                 logging.error(f'Error while processing file {file}: {e}')

@@ -32,6 +32,20 @@ async def download_file_from_url(url: str):
             return file
 
 
+async def download_file_from_url_stream(url: str, file_path: str, chunk_size: int = 8192):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status != 200:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Cannot download: {response.reason} {response.status}",
+                )
+            with open(file_path, 'wb') as file:
+                async for chunk in response.content.iter_chunked(chunk_size):
+                    file.write(chunk)
+            return file_path
+
+
 class UploadViaURL(BaseModel):
     url: str
 
@@ -74,6 +88,31 @@ class TabUploadRouter(APIRouter):
         self.add_api_route("/tab-files-process-now", self._upload_files_process_now, methods=["GET"])
         self.add_api_route("/tab-files-filetypes-setup", self._tab_files_filetypes_setup, methods=["POST"])
         self.add_api_route("/tab-files-log", self._tab_files_log, methods=["GET"])
+        self.add_api_route("/tab-files-lora-upload", self._upload_lora, methods=["POST"])
+        self.add_api_route("/tab-files-lora-upload-url", self._upload_lora_url, methods=["POST"])
+
+    async def _upload_lora(self, file: UploadFile):
+        resp: JSONResponse = await self._tab_files_upload(file, env.DIR_LORAS)
+        if resp.status_code != 200:
+            return resp
+        with open(env.FLAG_LAUNCH_PROCESS_UPLOADED_LORA, "w") as f:
+            f.write("")
+        return JSONResponse({"message": "OK"}, status_code=200)
+
+    async def _upload_lora_url(self, file: UploadViaURL):
+        file_name = file.url.split("/")[-1]
+        file_path = os.path.join(env.DIR_LORAS, file_name)
+        with open(env.FLAG_UPLOAD_LORA_URL_SCHEDULED, 'w') as f:
+            f.write("")
+        try:
+            await download_file_from_url_stream(file.url, file_path)
+            os.remove(env.FLAG_UPLOAD_LORA_URL_SCHEDULED)
+        except Exception as e:
+            os.remove(env.FLAG_UPLOAD_LORA_URL_SCHEDULED)
+            return JSONResponse({"message": f"Cannot download: {e}"}, status_code=500)
+        with open(env.FLAG_LAUNCH_PROCESS_UPLOADED_LORA, "w") as f:
+            f.write("")
+        return JSONResponse({"message": "OK"}, status_code=200)
 
     async def _tab_files_get(self):
         result = {
@@ -144,9 +183,10 @@ class TabUploadRouter(APIRouter):
         # _reset_process_stats()  -- this requires process script restart, but it flashes too much in GUI
         return JSONResponse("OK")
 
-    async def _tab_files_upload(self, file: UploadFile):
-        tmp_path = os.path.join(env.DIR_UPLOADS, file.filename + ".tmp")
-        file_path = os.path.join(env.DIR_UPLOADS, file.filename)
+    async def _tab_files_upload(self, file: UploadFile, upload_cust_dest: Optional[str] = None):
+        upload_dest = upload_cust_dest or env.DIR_UPLOADS
+        tmp_path = os.path.join(upload_dest, file.filename + ".tmp")
+        file_path = os.path.join(upload_dest, file.filename)
         if os.path.exists(file_path):
             response_data = {"message": f"File with this name already exists"}
             return JSONResponse(content=response_data, status_code=409)
