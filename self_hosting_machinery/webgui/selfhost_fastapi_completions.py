@@ -216,6 +216,23 @@ async def chat_streamer(ticket: Ticket, timeout, created_ts):
         ticket.done()
 
 
+async def openai_chat_streamer(streaming_response: StreamingResponse):
+    finish_reason = None
+    prefix, postfix = "data: ", "\n\n"
+    async for data in streaming_response.body_iterator:
+        try:
+            data = json.loads(data[len(prefix):-len(postfix)])
+            log(data)
+            finish_reason = data["choices"][0]["finish_reason"]
+            data["choices"][0]["finish_reason"] = None
+            data["choices"][0]["delta"] = {
+                "content": data["choices"][0]["delta"],
+            }
+        except json.JSONDecodeError:
+            data = {"choices": [{"finish_reason": finish_reason}]}
+        yield prefix + json.dumps(data) + postfix
+
+
 async def error_string_streamer(ticket_id, static_message, account, created_ts):
     yield "data: " + json.dumps(
         {"object": "smc.chat.chunk", "role": "assistant", "delta": static_message, "finish_reason": "END"}) + "\n\n"
@@ -237,6 +254,8 @@ class CompletionsRouter(APIRouter):
         self.add_api_route("/completions", self._completions, methods=["POST"])
         self.add_api_route("/contrast", self._contrast, methods=["POST"])
         self.add_api_route("/chat", self._chat, methods=["POST"])
+        self.add_api_route("/models", self._openai_models, methods=["GET"])
+        self.add_api_route("/chat/completions", self._openai_chat_completions, methods=["POST"])
         self._inference_queue = inference_queue
         self._id2ticket = id2ticket
         self._model_assigner = model_assigner
@@ -397,3 +416,26 @@ class CompletionsRouter(APIRouter):
         self._id2ticket[ticket.id()] = ticket
         await q.put(ticket)
         return StreamingResponse(chat_streamer(ticket, self._timeout, req["created"]))
+
+    async def _openai_models(self):
+        # TODO: error handling
+        resp = await self._login()
+        data = [
+            {
+                "id": function["model"], "root": function["model"],
+                "object": "model", "created": 0, "owned_by": "",
+                "permission": [], "parent": None,
+            }
+            for function in resp["longthink-functions-today-v2"].values()
+            if function["type"] == "chat"
+        ]
+        return {
+            "object": "list",
+            "data": data,
+        }
+
+    async def _openai_chat_completions(self, post: ChatContext, request: Request, account: str = "XXX"):
+        # TODO: cancellation
+        post.function = "free-chat"
+        streaming_response = await self._chat(post, request, account)
+        return StreamingResponse(openai_chat_streamer(streaming_response))
