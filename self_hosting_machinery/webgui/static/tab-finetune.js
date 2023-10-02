@@ -915,7 +915,13 @@ export async function init() {
         change_finetune_model();
     });
 
-    await init_upload_files_modal(
+}
+
+export function tab_switched_here() {
+    tab_finetune_get();
+    tab_finetune_config_and_runs();
+    render_schedule_dialog();
+    init_upload_files_modal(
         document.querySelector('#lora-upload-files-modal'),
         document.querySelector('#finetune-upload-lora-open-modal'),
         'Upload Lora',
@@ -925,17 +931,12 @@ export async function init() {
     );
 }
 
-export function tab_switched_here() {
-    tab_finetune_get();
-    tab_finetune_config_and_runs();
-    render_schedule_dialog();
-}
-
 export function tab_switched_away() {
     if (logs_streamer_to_stop !== undefined) {
         logs_streamer_to_stop.cancel();
         logs_streamer_to_stop = undefined;
     }
+    document.querySelector('#lora-upload-files-modal').innerHTML = "";
 }
 
 export function tab_update_each_couple_of_seconds() {

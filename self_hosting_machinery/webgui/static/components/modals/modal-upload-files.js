@@ -6,8 +6,10 @@ export async function init(
     submit_link_endpoint,
     submit_input_endpoint,
     text_on_progress_done,
+    link_placeholder,
+    input_help_text
 ) {
-    let req = await fetch('/modals/modal-upload-files.html');
+    let req = await fetch('/components/modals/modal-upload-files.html');
     insert_in_el.innerHTML = await req.text();
     insert_in_el.querySelector('#upload-modal-label').innerHTML = modal_label;
 
@@ -20,6 +22,12 @@ export async function init(
     } else {
         console.log(`default tab ${default_tab} is not implemented!`);
     }
+    if (link_placeholder) {
+        insert_in_el.querySelector('#upload-files-link').placeholder = link_placeholder;
+    }
+    if (input_help_text) {
+        insert_in_el.querySelector('.ssh-info').innerHTML = input_help_text;
+    }
 
     const modal_events = new UploadFilesModalEvents(
         submit_link_endpoint,
@@ -31,7 +39,6 @@ export async function init(
         modal_events.show_modal();
     });
 }
-
 
 class UploadFilesModalEvents {
     constructor(
