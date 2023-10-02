@@ -97,7 +97,7 @@ class TabUploadRouter(APIRouter):
             return resp
         with open(env.FLAG_LAUNCH_PROCESS_UPLOADED_LORA, "w") as f:
             f.write("")
-        return JSONResponse({"message": "OK"}, status_code=200)
+        return JSONResponse("OK", status_code=200)
 
     async def _upload_lora_url(self, file: UploadViaURL):
         file_name = file.url.split("/")[-1]
@@ -112,7 +112,7 @@ class TabUploadRouter(APIRouter):
             return JSONResponse({"message": f"Cannot download: {e}"}, status_code=500)
         with open(env.FLAG_LAUNCH_PROCESS_UPLOADED_LORA, "w") as f:
             f.write("")
-        return JSONResponse({"message": "OK"}, status_code=200)
+        return JSONResponse("OK", status_code=200)
 
     async def _tab_files_get(self):
         result = {
