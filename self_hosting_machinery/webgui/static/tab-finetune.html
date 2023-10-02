@@ -1,52 +1,5 @@
 <div class="row">
-
-    <!-- Modal -->
-  <div class="modal fade" id="finetune-upload-lora-modal" tabindex="-1" role="dialog" aria-labelledby="finetune-upload-lora-modal" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered" role="document">
-          <div class="modal-content">
-              <div class="modal-header">
-                  <h5 class="modal-title" id="uploadModalLabel">Upload lora</h5>
-              </div>
-              <div class="modal-body">
-                  <!-- Nav tabs -->
-                  <ul class="nav nav-tabs" id="uploadTabs" role="tablist" style="margin-bottom: 15px">
-                      <li class="nav-item">
-                          <button class="nav-finetune-upload-lora nav-link main-tab-button main-active active" id="finetune-upload-lora-link-tab" data-toggle="finetune-upload-lora-link-div" data-method="link">Upload by Link</button>
-                      </li>
-                      <li class="nav-item">
-                          <button class="nav-finetune-upload-lora nav-link main-tab-button" id="finetune-upload-lora-input-tab" data-toggle="finetune-upload-lora-input-div" data-method="input">Choose file</button>
-                      </li>
-                  </ul>
-                  <!-- Tab panes -->
-                  <div class="tab-content">
-                      <div class="pane-upload-lora-modal tab-pane fade show active" id="finetune-upload-lora-link-div" role="tabpanel" aria-labelledby="finetune-upload-lora-link-tab">
-                          <div class="form-group">
-                              <input type="text" class="form-control" id="finetune-upload-lora-link" placeholder="Enter file URL">
-                          </div>
-                        <div id="lora-upload-url-status" class="uploaded-status"></div>
-
-                      </div>
-                      <div class="pane-upload-lora-modal tab-pane fade" id="finetune-upload-lora-input-div" role="tabpanel" aria-labelledby="finetune-upload-lora-input-tab">
-                          <div class="form-group">
-                            <div class="mb-3">
-                              <input type="file" id="finetune-upload-lora-input" class="form-control">
-                            </div>
-                            <div id="lora-upload-progress" class="progress d-none">
-                              <div id="lora-upload-progress-bar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
-                            <div id="loaded_n_total" class="uploaded-total"></div>
-                            <div id="status" class="uploaded-status"></div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-              <div class="modal-footer" style="margin-top: 15px">
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                  <button type="button" class="btn btn-primary" id="finetune-upload-lora-submit">Submit</button>
-              </div>
-          </div>
-      </div>
-  </div>
+  <div id="lora-upload-files-modal"></div>
 
   <div class="col-5">
     <div class="pane use-model-pane">
@@ -85,7 +38,7 @@
           </tbody>
         </table>
       </div>
-      <button id="finetune-upload-lora-open-modal"class="btn btn-sm btn-outline-primary mt-1" data-bs-toggle="modal" data-bs-target="#finetune-upload-lora-modal">Upload lora</button>
+      <button id="finetune-upload-lora-open-modal" class="btn btn-sm btn-outline-primary mt-1">Upload lora</button>
     </div>
     <div class="pane">
       <div class="start-funetune-select-model">

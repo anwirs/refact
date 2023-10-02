@@ -1,3 +1,5 @@
+import {init as init_upload_files_modal} from './components/modals/modal-upload-files.js'
+
 let logs_streamer_run_id = "";
 let gfx_showing_run_id = "";
 
@@ -912,175 +914,16 @@ export async function init() {
     model_select_dropdown.addEventListener('change', function() {
         change_finetune_model();
     });
-    // document.getElementById('finetune-upload-lora-open-modal').addEventListener('click', () => {
-    //     document.getElementById('finetune-upload-lora-submit').removeAttribute('disabled');
-    // });
-    const btns_nav_upload_lora = document.querySelectorAll('button.nav-finetune-upload-lora')
-    const panes_upload_lora_modal = document.querySelectorAll('.pane-upload-lora-modal');
-    btns_nav_upload_lora.forEach(
-        el => el.addEventListener('click', () => {
-            if (!el.classList.contains('active')) {
-                btns_nav_upload_lora.forEach(el => el.classList.remove('active', 'main-active'));
-                el.classList.add('active', 'main-active');
-                panes_upload_lora_modal.forEach(el => el.classList.remove('show', 'active'));
-                console.log('showing', el.dataset.toggle);
-                document.getElementById(el.dataset.toggle).classList.add('show', 'active')
-            }
-        })
+
+    await init_upload_files_modal(
+        document.querySelector('#lora-upload-files-modal'),
+        document.querySelector('#finetune-upload-lora-open-modal'),
+        'Upload Lora',
+        'link',
+        '/tab-files-lora-upload-url', '/tab-files-lora-upload',
+        "Loading lora. This may take a few more minutes..."
     );
-
-    const finetune_upload_lora_submit = document.getElementById('finetune-upload-lora-submit')
-    finetune_upload_lora_submit.addEventListener('click', () => {
-        // finetune_upload_lora_submit.setAttribute('disabled', 'true');
-        console.log('submit clicked')
-        const upload_method = get_upload_method_lora();
-        console.log(`upload method: ${upload_method}`)
-        if (upload_method === 'input') {
-            upload_file();
-        } else {
-            upload_url();
-        }
-    });
 }
-
-function get_upload_method_lora() {
-    const btns_nav_upload_lora = document.querySelectorAll('button.nav-finetune-upload-lora')
-    for (const btn of btns_nav_upload_lora) {
-        if (btn.classList.contains('active')) {
-            return btn.dataset.method;
-        }
-    }
-}
-
-function upload_file() {
-    const fileInput = document.getElementById('finetune-upload-lora-input');
-    if (fileInput.files.length === 0) {
-        return;
-    }
-    var formdata = new FormData();
-    formdata.append("file", fileInput.files[0]);
-    document.querySelector('#lora-upload-progress').classList.toggle('d-none');
-    document.querySelector('.tab-upload-file-submit').classList.toggle('d-none');
-    var ajax = new XMLHttpRequest();
-    ajax.upload.addEventListener("progress", progressHandler, false);
-    ajax.addEventListener("load", completeHandler, false);
-    ajax.addEventListener("error", errorHandler, false);
-    ajax.addEventListener("abort", abortHandler, false);
-    ajax.open("POST", "/tab-files-lora-upload");
-    ajax.send(formdata);
-}
-
-function progressHandler(event) {
-    document.getElementById('finetune-upload-lora-submit').disabled = true;
-    document.getElementById('finetune-upload-lora-link-tab').disabled = true;
-    const file_modal = document.getElementById('finetune-upload-lora-modal');
-    console.log(event);
-    file_modal.querySelector('#loaded_n_total').innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
-    var percent = (event.loaded / event.total) * 100;
-    let upload_done = Math.round(percent) >= 100;
-    file_modal.querySelector('#lora-upload-progress-bar').setAttribute('aria-valuenow', Math.round(percent).toString());
-    file_modal.querySelector('#lora-upload-progress-bar').style.width = Math.round(percent).toString() + "%";
-    file_modal.querySelector('#status').innerHTML = Math.round(percent).toString() + "% uploaded... please wait";
-    if (upload_done) {
-        file_modal.querySelector('#lora-upload-progress-bar').classList.add('progress-bar-animated')
-        file_modal.querySelector('#status').innerHTML = "Loading lora. This may take a few more minutes..."
-    }
-
-  }
-
-  function completeHandler(event) {
-    document.getElementById('status').innerHTML = event.target.responseText;
-    if(event.target.status === 200) {
-        setTimeout(() => {
-            process_now_update_until_finished();
-            document.querySelector('#tab-upload-file-input').value = '';
-            let file_modal_b = bootstrap.Modal.getOrCreateInstance(document.getElementById('finetune-upload-lora-modal'));
-            document.getElementById('finetune-upload-lora-submit').disabled = false;
-            document.getElementById('finetune-upload-lora-link-tab').disabled = false;
-            document.querySelector('#lora-upload-progress').classList.toggle('d-none');
-            document.querySelector('.tab-upload-file-submit').classList.toggle('d-none');
-            const file_modal = document.getElementById('finetune-upload-lora-modal');
-            file_modal.querySelector('#loaded_n_total').innerHTML = "";
-            file_modal.querySelector('#status').innerHTML = "";
-            file_modal_b.hide();
-        }, 500);
-    } else {
-        let error_msg = JSON.parse(event.target.responseText);
-        const file_modal = document.getElementById('finetune-upload-lora-modal');
-        file_modal.querySelector('#lora-upload-progress-bar').setAttribute('aria-valuenow', 0);
-        file_modal.querySelector('.progress').classList.add('d-none');
-        file_modal.querySelector('#loaded_n_total').innerHTML = "";
-        file_modal.querySelector('#status').innerHTML = error_msg.message;
-        document.getElementById('finetune-upload-lora-submit').disabled = false;
-    }
-  }
-
-  function errorHandler(event) {
-    document.querySelector('#status').innerHTML = event.target.responseText.message;
-  }
-
-  function abortHandler(event) {
-    document.querySelector('#status').innerHTML = "Upload Aborted";
-}
-
-const process_now_update_until_finished = async () => {
-    const process_button = document.getElementById('finetune-upload-lora-submit');
-    process_button.disabled = true;
-    process_button.dataset.loading = true;
-};
-
-
-function upload_url() {
-    const fileInput = document.querySelector('#finetune-upload-lora-link');
-    if (!fileInput || fileInput.value === '') {
-        return;
-    }
-
-    const url_regex = /^(ftp|http|https):\/\/[^ "]+$/;
-    const is_url = url_regex.test(fileInput.value);
-    if (!is_url) {
-        handle_invalid_url();
-        return;
-    }
-
-    const formData = {
-        'url': fileInput.value
-    };
-
-    fetch('/tab-files-lora-upload-url', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-    })
-        .then(response => {
-            if (!response.ok) {
-                return response.json()
-                    .then(error => {
-                        throw new Error(error.message);
-                    });
-            }
-            return response.json();
-        })
-        .then(data => {
-            process_now_update_until_finished()
-            fileInput.value = '';
-            document.querySelector('#lora-upload-url-status').innerHTML = '';
-            let url_modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('finetune-upload-lora-modal'));
-            url_modal.hide();
-        })
-        .catch(error => {
-            document.querySelector('#lora-upload-url-status').innerHTML = error.message;
-        });
-}
-
-
-function handle_invalid_url() {
-    const error = new Error('Invalid URL');
-    document.querySelector('#status-url').innerHTML = error.message;
-}
-
 
 export function tab_switched_here() {
     tab_finetune_get();
