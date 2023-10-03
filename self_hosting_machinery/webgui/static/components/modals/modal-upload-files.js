@@ -158,8 +158,7 @@ class UploadFilesModalEvents {
         file_modal.querySelector('#updlg-upload-files-link').disabled = false;
         file_modal.querySelector('#updlg-upload-files-input').disabled = false;
         file_modal.querySelector('#updlg-file-upload-progress-bar').setAttribute('aria-valuenow', '0');
-        file_modal.querySelector('#updlg-file-upload-progress').classList.toggle('d-none');
-        file_modal.querySelector('#updlg-upload-files-modal-submit').classList.remove('d-none');
+        file_modal.querySelector('#updlg-file-upload-progress').classList.add('d-none');
         file_modal.querySelector('#updlg-loaded_n_total').innerHTML = "";
         file_modal.querySelector('#updlg-upload-files-status').innerHTML = "";
         file_modal.querySelector('#updlg-upload-files-link').value = "";
@@ -301,7 +300,8 @@ class UploadFilesModalEvents {
                     this.hide_modal();
                     }).catch(
                         error => {
-                        file_modal.querySelector('#updlg-upload-files-status').innerHTML = error.message;
-                });
+                            this.reset_modal_fields();
+                            file_modal.querySelector('#updlg-upload-files-status').innerHTML = error.message;
+                        });
     }
 }

@@ -19,7 +19,6 @@ from typing import Dict, Optional
 __all__ = ["TabUploadRouter"]
 
 
-
 async def download_file_from_url(url: str):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
@@ -30,20 +29,6 @@ async def download_file_from_url(url: str):
                 )
             file = await response.read()
             return file
-
-
-async def download_file_from_url_stream(url: str, file_path: str, chunk_size: int = 8192):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status != 200:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Cannot download: {response.reason} {response.status}",
-                )
-            with open(file_path, 'wb') as file:
-                async for chunk in response.content.iter_chunked(chunk_size):
-                    file.write(chunk)
-            return file_path
 
 
 class UploadViaURL(BaseModel):

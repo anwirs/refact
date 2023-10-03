@@ -926,7 +926,7 @@ export function tab_switched_here() {
         document.querySelector('#finetune-upload-lora-open-modal'),
         'Upload Lora',
         'link',
-        '/tab-files-lora-upload-url', '/tab-files-lora-upload',
+        '/lora-upload-url', '/lora-upload',
         "Loading lora. This may take a few more minutes..."
     );
 }
