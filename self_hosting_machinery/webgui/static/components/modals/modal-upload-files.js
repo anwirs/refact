@@ -43,13 +43,26 @@ let modal_html = `
         </div>
       </div>
       <div class="modal-footer" style="margin-top: 15px">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-secondary" id="updlg-upload-files-modal-close" data-bs-dismiss="modal">Close</button>
         <button type="button" class="btn btn-primary" id="updlg-upload-files-modal-submit">Submit</button>
       </div>
     </div>
   </div>
 </div>
 `
+
+let gl_open_on_click_el;
+let gl_open_on_click_el_default_html;
+let gl_modal;
+
+function makeModalBackdropStatic() {
+    gl_modal._config.backdrop = 'static';
+}
+
+// Function to make the modal backdrop responsive to outside clicks
+function makeModalBackdropResponsive() {
+    gl_modal._config.backdrop = 'true';
+}
 
 
 export async function init(
@@ -63,7 +76,11 @@ export async function init(
     link_placeholder,
     input_help_text
 ) {
+    gl_open_on_click_el = open_on_click_el;
+    gl_open_on_click_el_default_html = open_on_click_el.innerHTML;
     insert_in_el.innerHTML = modal_html;
+
+    gl_modal = new bootstrap.Modal(document.getElementById('updlg-modal-upload-files'));
     insert_in_el.querySelector('#updlg-upload-modal-label').innerHTML = modal_label;
 
     if (default_tab === 'link') {
@@ -81,7 +98,6 @@ export async function init(
     if (input_help_text) {
         insert_in_el.querySelector('.ssh-info').innerHTML = input_help_text;
     }
-
     const modal_events = new UploadFilesModalEvents(
         submit_link_endpoint,
         submit_input_endpoint,
@@ -151,7 +167,7 @@ class UploadFilesModalEvents {
 
     reset_modal_fields() {
         const file_modal = document.getElementById('updlg-modal-upload-files');
-
+        gl_open_on_click_el.innerHTML = gl_open_on_click_el_default_html;
         file_modal.querySelector('#updlg-upload-files-input').value = '';
         file_modal.querySelector('#updlg-upload-files-modal-submit').disabled = false;
         file_modal.querySelector('#updlg-nav-upload-files-tab-link').disabled = false;
@@ -164,6 +180,8 @@ class UploadFilesModalEvents {
         file_modal.querySelector('#updlg-upload-files-link').value = "";
         file_modal.querySelector('#updlg-upload-files-100-spinner').hidden = true;
         file_modal.querySelector('#updlg-nav-upload-files-tab-input').disabled = false;
+        makeModalBackdropResponsive();
+        file_modal.querySelector('#updlg-upload-files-modal-close').disabled = false;
     }
 
     hide_modal() {
@@ -177,8 +195,15 @@ class UploadFilesModalEvents {
     process_now_update_until_finished(upload_method) {
         const file_modal = document.getElementById('updlg-modal-upload-files');
         const process_button = file_modal.querySelector('#updlg-upload-files-modal-submit');
+        file_modal.querySelector('#updlg-upload-files-modal-close').disabled = true;
+
+        // file_modal.classList.add('modal-static');
         process_button.disabled = true;
         process_button.dataset.loading = 'true';
+        makeModalBackdropStatic();
+        if (gl_open_on_click_el.innerHTML === gl_open_on_click_el_default_html) {
+            gl_open_on_click_el.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading`;
+        }
         if (upload_method === 'link') {
             file_modal.querySelector('#updlg-nav-upload-files-tab-input').disabled = true;
             file_modal.querySelector('#updlg-upload-files-link').disabled = true;
