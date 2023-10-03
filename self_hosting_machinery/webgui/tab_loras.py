@@ -3,15 +3,14 @@ import subprocess
 
 from pathlib import Path
 
-import aiohttp
-
-from fastapi import APIRouter, UploadFile, HTTPException
+from fastapi import APIRouter, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from refact_data_pipeline.finetune.process_uploaded_files import rm_and_unpack, get_source_type
 from self_hosting_machinery import env
 from self_hosting_machinery.webgui.selfhost_webutils import log
+from self_hosting_machinery.webgui.tab_upload import download_file_from_url
 
 
 class UploadViaURL(BaseModel):
@@ -23,20 +22,6 @@ def rm(f):
         subprocess.check_call(['rm', '-rf', f])
     except BaseException as e:
         log(f"Error while removing {f}: {e}")
-
-
-async def download_file_from_url_stream(url: str, file_path: str, chunk_size: int = 8192) -> str:
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status != 200:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Cannot download: {response.reason} {response.status}",
-                )
-            with open(file_path, 'wb') as file:
-                async for chunk in response.content.iter_chunked(chunk_size):
-                    file.write(chunk)
-            return file_path
 
 
 async def unpack(file_path: Path) -> JSONResponse:
@@ -74,8 +59,7 @@ class TabLorasRouter(APIRouter):
             try:
                 with open(tmp_path, "wb") as f:
                     while True:
-                        contents = await file.read(1024)
-                        if not contents:
+                        if not (contents := await file.read(int(1024 * 1024))):
                             break
                         f.write(contents)
                 os.rename(tmp_path, file_path)
@@ -103,7 +87,7 @@ class TabLorasRouter(APIRouter):
         file_name = file.url.split("/")[-1]
         file_path = os.path.join(env.DIR_LORAS, file_name)
         try:
-            await download_file_from_url_stream(file.url, file_path)
+            await download_file_from_url(file.url, file_path)
         except Exception as e:
             rm(file_path)
             return JSONResponse({"message": f"Cannot download: {e}"}, status_code=500)

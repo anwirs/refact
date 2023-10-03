@@ -16,11 +16,10 @@ from pydantic import BaseModel, Required
 from typing import Dict, Optional
 
 
-__all__ = ["TabUploadRouter"]
+__all__ = ["TabUploadRouter", "download_file_from_url"]
 
 
-
-async def download_file_from_url(url: str):
+async def download_file_from_url(url: str, file_path: str) -> None:
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             if response.status != 200:
@@ -28,8 +27,10 @@ async def download_file_from_url(url: str):
                     status_code=500,
                     detail=f"Cannot download: {response.reason} {response.status}",
                 )
-            file = await response.read()
-            return file
+            with open(file_path, 'wb') as file:
+                async for chunk in response.content.iter_chunked(1024 * 1024):
+                    file.write(chunk)
+            raise HTTPException(status_code=500)
 
 
 class UploadViaURL(BaseModel):
@@ -153,7 +154,7 @@ class TabUploadRouter(APIRouter):
         try:
             with open(tmp_path, "wb") as f:
                 while True:
-                    contents = await file.read(1024)
+                    contents = await file.read(int(1024 * 1024))
                     if not contents:
                         break
                     f.write(contents)
@@ -168,16 +169,16 @@ class TabUploadRouter(APIRouter):
         return JSONResponse("OK")
 
     async def _upload_file_from_url(self, post: UploadViaURL):
-        log("downloading \"%s\"" % post.url)
-        bin = await download_file_from_url(post.url)
-        log("/download")
         last_path_element = os.path.split(post.url)[1]
         file_path = os.path.join(env.DIR_UPLOADS, last_path_element)
+        log("downloading \"%s\"" % post.url)
         try:
-            with open(file_path, "wb") as f:
-                f.write(bin)
-        except OSError as e:
-            return JSONResponse({"message": f"Error: {e}"}, status_code=500)
+            await download_file_from_url(post.url, file_path)
+        except Exception as e:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            return JSONResponse({"message": f"Cannot download: {e}"}, status_code=500)
+        log("/download")
         _reset_process_stats()
         return JSONResponse("OK")
 
